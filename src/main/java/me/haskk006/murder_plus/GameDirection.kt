@@ -73,9 +73,9 @@ class GameDirection(private val plugin: JavaPlugin, private val playerSetting: P
     data class BlockInfo(val location: Location, val type: Material, val data: BlockData)
     var foot = true
     private var footStepsRecords = mutableListOf<FootSteps>()
+    private val METADATA_DEATH = "deathHandled"
 
-
-    override fun onCommand(sender: CommandSender, command: Command, label: String, args: Array<out String>): Boolean {
+        override fun onCommand(sender: CommandSender, command: Command, label: String, args: Array<out String>): Boolean {
         if (command.name.equals("game_start", ignoreCase = true) && inGameFlag == 0) {
             stage = ""
             if (args.isNotEmpty()) {
@@ -375,7 +375,10 @@ class GameDirection(private val plugin: JavaPlugin, private val playerSetting: P
 
         Bukkit.getServer().onlinePlayers.forEach { player ->
             player.gameMode = GameMode.SURVIVAL
-            player.removeMetadata("deathHandled", plugin)
+
+            if (player.hasMetadata(METADATA_DEATH)) {
+                player.removeMetadata(METADATA_DEATH, plugin)
+            }
             // すでにマップを持っている場合、そのマップを削除
             val inventory = player.inventory
             val itemInSlot = inventory.getItem(8)
@@ -618,8 +621,8 @@ class GameDirection(private val plugin: JavaPlugin, private val playerSetting: P
             }
         }
         // プレイヤーが死亡した処理の二重カウント対策　※要改善
-        if (player.hasMetadata("deathHandled")) { return }
-        player.setMetadata("deathHandled", FixedMetadataValue(plugin, true))
+        if (player.hasMetadata(METADATA_DEATH)) { return }
+        player.setMetadata(METADATA_DEATH, FixedMetadataValue(plugin, true))
 
         // 特殊アイテム（ガイドブック、マップ、トライデント、弓、TNT、トリップワイヤーフック）をドロップ（喪失）しないようにする
         val itemsToKeep = setOf(Material.WRITTEN_BOOK, Material.FILLED_MAP, Material.TRIDENT, Material.BOW, Material.TNT, Material.TRIPWIRE_HOOK, Material.BARRIER, Material.INK_SAC, Material.TOTEM_OF_UNDYING)
