@@ -169,7 +169,6 @@ class GameDirection(private val plugin: JavaPlugin, private val playerSetting: P
                                         player.playSound(it.location, Sound.BLOCK_NOTE_BLOCK_PLING, 1.0f, 2.0f)
                                         player.gameMode = GameMode.SURVIVAL
 
-                                        player.sendMessage("limitationFlag: test") //test
                                         // task1の座標にマーカーを表示
                                         val task1 = mapContents.find {it.contents == "task1Location"}?.locations?.get(0)
                                         val task1Location = Location(Bukkit.getWorlds()[0], task1?.x!!, task1.y, task1.z)
@@ -295,10 +294,6 @@ class GameDirection(private val plugin: JavaPlugin, private val playerSetting: P
                             val lobbyLocation = Location(Bukkit.getWorlds()[0], 0.0, -1.0, 0.0)
                             Bukkit.getServer().onlinePlayers.forEach { player ->
                                 clearPlayersInventory(player) // インベントリ初期化
-
-
-                                player.sendMessage("${ChatColor.RED}timeOfBackToLobby: check1") //test
-
                                 player.teleport(lobbyLocation) // ロビーに転送
                                 player.setBedSpawnLocation(lobbyLocation, true) // リスポーン位置を設定
                                 player.gameMode = GameMode.ADVENTURE // アドベンチャーモードに設定
@@ -389,13 +384,11 @@ class GameDirection(private val plugin: JavaPlugin, private val playerSetting: P
                 inventory.setItem(8, ItemStack(Material.AIR))
             }
 
-            /*
             // 新しくステージ用のマップを付与
             val stageMap = StageMap()
             val mC = mapContents.find{it.contents=="mapCenterLocations"}?.locations!!
             val stageLocation = Location(Bukkit.getWorlds()[0], mC[0].x, mC[0].y, mC[0].z)
             stageMap.giveStageMap(player, stageLocation)
-            */
 
             // お互いのプレイヤーのネームタグを見れないようにする
             val scoreboard: Scoreboard = Bukkit.getScoreboardManager()!!.mainScoreboard
@@ -411,7 +404,7 @@ class GameDirection(private val plugin: JavaPlugin, private val playerSetting: P
         murderers.addAll(players.subList(0, murderCount))
         var murderNormals: List<Player> = murderers.toList()
 
-        if (murderers.size > 1) {
+        if (murderers.size > 0) { //test
             // シャドウ
             val shadowsIndex = Random.nextInt(murderers.size)
             shadows.add(murderers[shadowsIndex])
@@ -428,7 +421,7 @@ class GameDirection(private val plugin: JavaPlugin, private val playerSetting: P
             val shielderesIndex = Random.nextInt(survivors.size)
             shielderes.add(survivors[shielderesIndex])
             survivorNormals = survivors.filter { it != survivors[shielderesIndex] }
-            if (survivors.size > 5) {
+            if (survivors.size > 1) { //test
                 // 探偵
                 val detectiveIndex = Random.nextInt(survivorNormals.size)
                 detectives.add(survivors[detectiveIndex])
@@ -787,40 +780,16 @@ class GameDirection(private val plugin: JavaPlugin, private val playerSetting: P
 
     // プレイヤー、チェスト、脱出タスクのスポーン地点を設定
     private fun setFieldMapContents(players: List<Player>) {
-        players.forEach {
-            it.sendMessage("setFieldMapContents: test") //test
-        }
-
         val pSLocations = mapContents.find { it.contents == "playerSpawnLocations" }?.locations?.shuffled()
-
-        if (pSLocations != null) {
-            // リスト内の各 Location オブジェクトを「(X, Y, Z)」形式の文字列に変換し、改行で結合
-            val locationMessage = pSLocations.joinToString("\n") { location ->
-                // 座標を見やすくするために整数に丸めます
-                val x = location.x.roundToInt()
-                val y = location.y.roundToInt()
-                val z = location.z.roundToInt()
-
-                // 座標文字列を整形
-                "§e- §aワールド: §6[§cX: $x, §aY: $y, §9Z: $z§6]\n"
-            }
-            players.forEach {
-                it.sendMessage(locationMessage) //test
-            }
-        }
-
 
         players.forEachIndexed { index, player ->
             if (pSLocations?.get(index) is LoadMapContentsLocations.LocationXYZ) {
                 val spawnPloc = pSLocations[index]
                 val loc = Location(Bukkit.getWorlds()[0], spawnPloc.x, spawnPloc.y+1, spawnPloc.z)
-
                 val x = loc.x.roundToInt()
                 val y = loc.y.roundToInt()
                 val z = loc.z.roundToInt()
-
                 player.teleport(loc)
-                player.sendMessage("${ChatColor.RED}§6[§cX: $x, §aY: $y, §9Z: $z§6]") //test
             }
         }
 
@@ -1100,7 +1069,7 @@ class GameDirection(private val plugin: JavaPlugin, private val playerSetting: P
             val chest = inventory.holder as Chest
             if (tntChests[chest.location] == true && !murderers.contains(player)) {
                 chest.location.world?.createExplosion(chest.location, 4.0f, false, false)
-                if (player.hasPotionEffect(PotionEffectType.DAMAGE_RESISTANCE) && player.health < 16.0) {
+                if (player.hasPotionEffect(PotionEffectType.DAMAGE_RESISTANCE)) { // && player.health < 16.0
                     // シールドが付与されていて、かつ体力が16以下のプレイヤーは、ダメージを無効化する
                     player.playEffect(EntityEffect.TOTEM_RESURRECT)
                     player.playSound(player.location, Sound.ITEM_TOTEM_USE, 0.6f, 1.0f)

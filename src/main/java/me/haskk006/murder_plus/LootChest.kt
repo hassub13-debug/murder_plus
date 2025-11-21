@@ -112,8 +112,8 @@ class LootChest(private val plugin: JavaPlugin, private val gameDirection: GameD
             randomValue < 70.0 -> Material.GOLD_INGOT   // 金インゴット66%
             randomValue < 92.0 -> Material.BREAD       // パン22%
             randomValue < 94.5 -> Material.ARROW        // 矢2.5%
-            randomValue < 99.5 -> Material.POTION         // ポーション5%
-            else -> Material.NETHER_STAR                // ネザースター0.5%
+            randomValue < 99.99 -> Material.POTION         // ポーション5%
+            else -> Material.NETHER_STAR                // ネザースター0.01%
         }
     }
 }
