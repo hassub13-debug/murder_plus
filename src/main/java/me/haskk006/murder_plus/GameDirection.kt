@@ -76,7 +76,7 @@ class GameDirection(private val plugin: JavaPlugin, private val playerSetting: P
     private var footStepsRecords = mutableListOf<FootSteps>()
     private val METADATA_DEATH = "deathHandled"
 
-        override fun onCommand(sender: CommandSender, command: Command, label: String, args: Array<out String>): Boolean {
+    override fun onCommand(sender: CommandSender, command: Command, label: String, args: Array<out String>): Boolean {
         if (command.name.equals("game_start", ignoreCase = true) && inGameFlag == 0) {
             stage = ""
             if (args.isNotEmpty()) {
