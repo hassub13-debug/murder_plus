@@ -34,6 +34,7 @@ import org.bukkit.scoreboard.Scoreboard
 import org.bukkit.scoreboard.Team
 import kotlin.math.cos
 import kotlin.math.floor
+import kotlin.math.roundToInt
 import kotlin.math.sin
 import kotlin.random.Random
 
@@ -292,6 +293,10 @@ class GameDirection(private val plugin: JavaPlugin, private val playerSetting: P
                             val lobbyLocation = Location(Bukkit.getWorlds()[0], 0.0, -1.0, 0.0)
                             Bukkit.getServer().onlinePlayers.forEach { player ->
                                 clearPlayersInventory(player) // インベントリ初期化
+
+
+                                player.sendMessage("${ChatColor.RED}timeOfBackToLobby: check1") //test
+
                                 player.teleport(lobbyLocation) // ロビーに転送
                                 player.setBedSpawnLocation(lobbyLocation, true) // リスポーン位置を設定
                                 player.gameMode = GameMode.ADVENTURE // アドベンチャーモードに設定
@@ -369,10 +374,6 @@ class GameDirection(private val plugin: JavaPlugin, private val playerSetting: P
         // マップコンテンツ（チェスト、脱出タスクなど）を配置
         setFieldMapContents(players)
 
-        players.forEach {
-            it.sendMessage("${ChatColor.RED}check1") //test
-        }
-
         Bukkit.getServer().onlinePlayers.forEach { player ->
             player.gameMode = GameMode.SURVIVAL
 
@@ -386,13 +387,14 @@ class GameDirection(private val plugin: JavaPlugin, private val playerSetting: P
                 inventory.setItem(8, ItemStack(Material.AIR))
             }
 
-            player.sendMessage("${ChatColor.RED}check2") //test
-
+            /*
             // 新しくステージ用のマップを付与
             val stageMap = StageMap()
             val mC = mapContents.find{it.contents=="mapCenterLocations"}?.locations!!
             val stageLocation = Location(Bukkit.getWorlds()[0], mC[0].x, mC[0].y, mC[0].z)
             stageMap.giveStageMap(player, stageLocation)
+            */
+
             // お互いのプレイヤーのネームタグを見れないようにする
             val scoreboard: Scoreboard = Bukkit.getScoreboardManager()!!.mainScoreboard
             val team: Team = scoreboard.getTeam("HideNameTag") ?: scoreboard.registerNewTeam("HideNameTag")
@@ -401,19 +403,11 @@ class GameDirection(private val plugin: JavaPlugin, private val playerSetting: P
             player.scoreboard = scoreboard
         }
 
-        players.forEach {
-            it.sendMessage("${ChatColor.RED}check3") //test
-        }
-
         // プレイヤーの各陣営への振り分け
         // マーダー
         val murderCount = kotlin.math.ceil(players.size * 0.125).toInt()
         murderers.addAll(players.subList(0, murderCount))
         var murderNormals: List<Player> = murderers.toList()
-
-        players.forEach {
-            it.sendMessage("${ChatColor.RED}check4") //test
-        }
 
         if (murderers.size > 1) {
             // シャドウ
@@ -422,17 +416,10 @@ class GameDirection(private val plugin: JavaPlugin, private val playerSetting: P
             murderNormals = murderers.filter { it != murderers[shadowsIndex] }
         }
 
-        players.forEach {
-            it.sendMessage("${ChatColor.RED}check5") //test
-        }
-
         // サバイバー
         survivors.addAll(players.subList(murderCount, players.size))
         var survivorNormals: List<Player> = survivors.toList()
 
-        players.forEach {
-            it.sendMessage("${ChatColor.RED}check6") //test
-        }
 
         if (survivors.size > 1) {
             // シールダー
@@ -447,10 +434,6 @@ class GameDirection(private val plugin: JavaPlugin, private val playerSetting: P
             }
         }
 
-        players.forEach {
-            it.sendMessage("${ChatColor.RED}check7") //test
-        }
-
         // 役職の振り分け
         murderNormals.forEach {
             var murderersList = murderers.joinToString(separator = " "){ it.name }
@@ -460,10 +443,6 @@ class GameDirection(private val plugin: JavaPlugin, private val playerSetting: P
             giveItem(it, Material.TNT, amount = 1, slot = 1)
             val speed = it.walkSpeed * 1.2f
             it.walkSpeed = speed
-        }
-
-        players.forEach {
-            it.sendMessage("${ChatColor.RED}check8") //test
         }
 
         shadows.forEach {
@@ -476,18 +455,10 @@ class GameDirection(private val plugin: JavaPlugin, private val playerSetting: P
             it.walkSpeed = speed
         }
 
-        players.forEach {
-            it.sendMessage("${ChatColor.RED}check9") //test
-        }
-
         detectives.forEach {
             it.sendTitle("${ChatColor.BLUE}${ChatColor.BOLD}あなたは 探偵 です", "", 10, 70, 20)
             giveItem(it, Material.BOW, amount = 1, slot = 0) // 探偵に弓を与える
             giveItem(it, Material.ARROW, amount = 3, slot = 1)
-        }
-
-        players.forEach {
-            it.sendMessage("${ChatColor.RED}check10") //test
         }
 
         shielderes.forEach {
@@ -496,17 +467,10 @@ class GameDirection(private val plugin: JavaPlugin, private val playerSetting: P
             giveItem(it, Material.TOTEM_OF_UNDYING, amount = 1, slot = 1)
         }
 
-        players.forEach {
-            it.sendMessage("${ChatColor.RED}check11") //test
-        }
-
         survivorNormals.forEach {
             it.sendTitle("${ChatColor.GREEN}${ChatColor.BOLD}あなたは サバイバー です", "", 10, 70, 20)
         }
 
-        players.forEach {
-            it.sendMessage("${ChatColor.RED}check12") //test
-        }
     }
 
     // 試合開始時に特定プレイヤーにアイテムを与える
@@ -821,14 +785,43 @@ class GameDirection(private val plugin: JavaPlugin, private val playerSetting: P
 
     // プレイヤー、チェスト、脱出タスクのスポーン地点を設定
     private fun setFieldMapContents(players: List<Player>) {
+        players.forEach {
+            it.sendMessage("setFieldMapContents: test") //test
+        }
+
         val pSLocations = mapContents.find { it.contents == "playerSpawnLocations" }?.locations?.shuffled()
+
+        if (pSLocations != null) {
+            // リスト内の各 Location オブジェクトを「(X, Y, Z)」形式の文字列に変換し、改行で結合
+            val locationMessage = pSLocations.joinToString("\n") { location ->
+                // 座標を見やすくするために整数に丸めます
+                val x = location.x.roundToInt()
+                val y = location.y.roundToInt()
+                val z = location.z.roundToInt()
+
+                // 座標文字列を整形
+                "§e- §aワールド: §6[§cX: $x, §aY: $y, §9Z: $z§6]\n"
+            }
+            players.forEach {
+                it.sendMessage(locationMessage) //test
+            }
+        }
+
+
         players.forEachIndexed { index, player ->
             if (pSLocations?.get(index) is LoadMapContentsLocations.LocationXYZ) {
                 val spawnPloc = pSLocations[index]
                 val loc = Location(Bukkit.getWorlds()[0], spawnPloc.x, spawnPloc.y+1, spawnPloc.z)
+
+                val x = loc.x.roundToInt()
+                val y = loc.y.roundToInt()
+                val z = loc.z.roundToInt()
+
                 player.teleport(loc)
+                player.sendMessage("${ChatColor.RED}§6[§cX: $x, §aY: $y, §9Z: $z§6]") //test
             }
         }
+
         val cSLocations = mapContents.find { it.contents == "chestSpawnLocations" }?.locations?.shuffled()?.take(100)
         cSLocations?.forEach { loc ->
             val spawnCloc = Location(Bukkit.getWorlds()[0], loc.x, loc.y+1, loc.z)
