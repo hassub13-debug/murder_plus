@@ -168,6 +168,8 @@ class GameDirection(private val plugin: JavaPlugin, private val playerSetting: P
                                         player.sendTitle("${ChatColor.WHITE}${ChatColor.BOLD}GAME START!!", "", 10, 70, 20)
                                         player.playSound(it.location, Sound.BLOCK_NOTE_BLOCK_PLING, 1.0f, 2.0f)
                                         player.gameMode = GameMode.SURVIVAL
+
+                                        player.sendMessage("limitationFlag: test") //test
                                         // task1の座標にマーカーを表示
                                         val task1 = mapContents.find {it.contents == "task1Location"}?.locations?.get(0)
                                         val task1Location = Location(Bukkit.getWorlds()[0], task1?.x!!, task1.y, task1.z)
