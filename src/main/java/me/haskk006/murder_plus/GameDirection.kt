@@ -17,6 +17,7 @@ import org.bukkit.event.EventHandler
 import org.bukkit.event.Listener
 import org.bukkit.event.block.Action
 import org.bukkit.event.entity.*
+import org.bukkit.event.hanging.HangingBreakByEntityEvent
 import org.bukkit.event.inventory.InventoryCloseEvent
 import org.bukkit.event.inventory.InventoryOpenEvent
 import org.bukkit.event.player.*
@@ -280,7 +281,7 @@ class GameDirection(private val plugin: JavaPlugin, private val playerSetting: P
                             // マッチ終了条件
                             if (murderersKilled >= murderers.size) {
                                 handleEndGame(0)
-                            } else if (survivorsKilled >= survivors.size) { //プラグインテスト
+                            } else if (survivorsKilled >= survivors.size + 1) { //test
                                 handleEndGame(1)
                             }
                         }
@@ -654,6 +655,15 @@ class GameDirection(private val plugin: JavaPlugin, private val playerSetting: P
         }
     }
 
+    @EventHandler
+    fun onPaintingBreak(event: HangingBreakByEntityEvent) {
+        val painting = event.entity as? Painting ?: return
+        val remover = event.remover
+        if (remover is Player) {
+            event.isCancelled = true
+        }
+    }
+
     // プレイヤーが他のプレイヤーから攻撃されると即死する
     @EventHandler
     fun onPlayerDamage(event: EntityDamageByEntityEvent) {
@@ -890,7 +900,7 @@ class GameDirection(private val plugin: JavaPlugin, private val playerSetting: P
         val block = event.clickedBlock ?: return
         // マッチ中にインタラクト不可能にする対象
         if (inGameFlag == 1) {
-            if (block.type == Material.ENDER_CHEST || block.type == Material.CAKE || block.type == Material.ITEM_FRAME || block.type == Material.LECTERN) {
+            if (block.type == Material.ENDER_CHEST || block.type == Material.CAKE || block.type == Material.ITEM_FRAME || block.type == Material.PAINTING || block.type == Material.LECTERN) {
                 event.isCancelled = true
             } else if ((block.type.name.contains("SIGN") || block.type.name.contains("TRAPDOOR") || block.type.name.contains("CANDLE"))) {
                 event.isCancelled = true
@@ -972,6 +982,10 @@ class GameDirection(private val plugin: JavaPlugin, private val playerSetting: P
                 }
             }
         }
+        if (inGameFlag == 0) { // changed
+            event.isCancelled = true
+            return
+        }
 
         // サボタージュ
         if (event.action == Action.RIGHT_CLICK_BLOCK && player.inventory.itemInMainHand.type == Material.TNT) {
@@ -990,53 +1004,58 @@ class GameDirection(private val plugin: JavaPlugin, private val playerSetting: P
                         }, 0L, 20L)
                         // スキルのクールタイムを設定
                         giveItem(player, Material.BARRIER, amount = 1, slot = 1)
-                        if (inGameFlag == 1) {
-                            Bukkit.getScheduler().runTaskLater(plugin, Runnable {
+                        // changed
+                        Bukkit.getScheduler().runTaskLater(plugin, Runnable {
+                            if (inGameFlag == 1) {
                                 giveItem(player, Material.TNT, amount = 1, slot = 1)
-                            }, 200L)
-                            event.isCancelled = true
-                            player.playSound(player.location, Sound.BLOCK_RESPAWN_ANCHOR_CHARGE, 0.9f, 1.0f)
-                            player.sendMessage("システム: 爆弾をセットしました。10秒後に再使用可能")
-                        }
+                            }
+                        }, 200L)
+                        event.isCancelled = true
+                        player.playSound(player.location, Sound.BLOCK_RESPAWN_ANCHOR_CHARGE, 0.9f, 1.0f)
+                        player.sendMessage("システム: 爆弾をセットしました。10秒後に再使用可能")
                     }
                 }
             }
         }
         // 煙幕
         if (player.inventory.itemInMainHand.type == Material.INK_SAC && event.action.toString().contains("RIGHT_CLICK")) {
-            if (inGameFlag == 1) {
-                for (entity in player.world.getNearbyEntities(player.location, 30.0, 30.0, 30.0)) {
-                    if (entity is Player && !murderers.contains(entity)) {
-                        entity.addPotionEffect(PotionEffect(PotionEffectType.BLINDNESS, 200, 1))
-                    }
+            // changed
+            for (inAreaPlayer in player.world.getNearbyEntities(player.location, 30.0, 30.0, 30.0)) {
+                if (inAreaPlayer is Player && inAreaPlayer.gameMode == GameMode.SURVIVAL && !murderers.contains(inAreaPlayer)) {
+                    inAreaPlayer.addPotionEffect(PotionEffect(PotionEffectType.BLINDNESS, 200, 1))
                 }
-                // スキルのクールタイムを設定
-                giveItem(player, Material.BARRIER, amount = 1, slot = 1)
-                Bukkit.getScheduler().runTaskLater(plugin, Runnable {
-                    giveItem(player, Material.INK_SAC, amount = 1, slot = 1)
-                }, 600L)
-                player.addPotionEffect(PotionEffect(PotionEffectType.SPEED, 120, 4))
-                player.world.spawnParticle(Particle.SQUID_INK, player.location, 30, 2.0, 1.0, 2.0)
-                event.isCancelled = true
-                player.playSound(player.location, Sound.ITEM_INK_SAC_USE, 0.9f, 1.0f)
-                player.sendMessage("システム: 煙幕を使用しました。30秒後に再使用可能")
             }
+            // スキルのクールタイムを設定
+            giveItem(player, Material.BARRIER, amount = 1, slot = 1)
+            Bukkit.getScheduler().runTaskLater(plugin, Runnable {
+                if (inGameFlag == 1) {
+                    giveItem(player, Material.INK_SAC, amount = 1, slot = 1)
+                }
+            }, 1200L)
+            player.addPotionEffect(PotionEffect(PotionEffectType.SPEED, 120, 4))
+            player.world.spawnParticle(Particle.SQUID_INK, player.location, 30, 2.0, 1.0, 2.0)
+            event.isCancelled = true
+            player.playSound(player.location, Sound.ITEM_INK_SAC_USE, 0.9f, 1.0f)
+            player.sendMessage("システム: 煙幕を使用しました。60秒後に再使用可能")
+
         }
         // シールド（トーテム）
         if (player.inventory.itemInMainHand.type == Material.TOTEM_OF_UNDYING && event.action.toString().contains("RIGHT_CLICK")) {
-            if (inGameFlag == 1) {
-                if (shield2target == "") {
-                    val otherPlayers = survivors.filter { it != player && it.name != shield1target && it.gameMode == GameMode.SURVIVAL}
-                    if (otherPlayers.isNotEmpty()) {
-                        val randomPlayer = otherPlayers.random()
-                        randomPlayer.addPotionEffect(PotionEffect(PotionEffectType.DAMAGE_RESISTANCE, Int.MAX_VALUE, 0, false, false))
-                        shield2target = randomPlayer.name
-                        player.sendMessage("システム: プレイヤーにシールドを付与しました")
-                    }
+            // changed
+            if (shield2target == "") {
+                val otherPlayers = survivors.filter {
+                    it.name != player.name && it.name != shield1target && it.gameMode == GameMode.SURVIVAL
+                }
+                if (otherPlayers.isNotEmpty()) {
+                    val randomPlayer = otherPlayers.random()
+                    randomPlayer.addPotionEffect(PotionEffect(PotionEffectType.DAMAGE_RESISTANCE, Int.MAX_VALUE, 0, false, false))
+                    shield2target = randomPlayer.name
+                    player.sendMessage("システム: プレイヤーにシールドを付与しました")
                 }
             }
         }
     }
+
     @EventHandler
     fun onPlayerInteractEntity(event: PlayerInteractEntityEvent) {
         val player = event.player
@@ -1045,17 +1064,15 @@ class GameDirection(private val plugin: JavaPlugin, private val playerSetting: P
         // プレイヤーがシールドを持っているかを確認
         if (player.inventory.itemInMainHand.type == Material.SHIELD && shielderes.contains(player)) {
             // シールダーがはじめて触れる相手にシールドを付与する
-            if (rightClicked is Player && shield1target == "") {
-                if (rightClicked.gameMode == GameMode.SURVIVAL) {
-                    if (rightClicked.name == shield2target) {
-                        player.sendMessage("そのプレイヤーにはすでにシールドが付与されています")
-                    }
-                    else {
-                        shield1target = rightClicked.name
-                        rightClicked.world.spawnParticle(Particle.ELECTRIC_SPARK, rightClicked.location, 10, 1.0, 1.0, 1.0)
-                        rightClicked.addPotionEffect(PotionEffect(PotionEffectType.DAMAGE_RESISTANCE, Int.MAX_VALUE, 0, false, false))
-                        player.sendMessage("プレイヤーにシールドを付与しました")
-                    }
+            if (rightClicked is Player && rightClicked.gameMode == GameMode.SURVIVAL && shield1target == "") {
+                if (rightClicked.name == shield2target) {
+                    player.sendMessage("そのプレイヤーにはすでにシールドが付与されています")
+                }
+                else {
+                    shield1target = rightClicked.name
+                    rightClicked.world.spawnParticle(Particle.ELECTRIC_SPARK, rightClicked.location, 10, 1.0, 1.0, 1.0)
+                    rightClicked.addPotionEffect(PotionEffect(PotionEffectType.DAMAGE_RESISTANCE, Int.MAX_VALUE, 0, false, false))
+                    player.sendMessage("プレイヤーにシールドを付与しました")
                 }
             }
         }
@@ -1070,14 +1087,16 @@ class GameDirection(private val plugin: JavaPlugin, private val playerSetting: P
             if (tntChests[chest.location] == true && !murderers.contains(player)) {
                 chest.location.world?.createExplosion(chest.location, 4.0f, false, false)
                 if (player.hasPotionEffect(PotionEffectType.DAMAGE_RESISTANCE)) { // && player.health < 16.0
-                    // シールドが付与されていて、かつ体力が16以下のプレイヤーは、ダメージを無効化する
-                    player.playEffect(EntityEffect.TOTEM_RESURRECT)
-                    player.playSound(player.location, Sound.ITEM_TOTEM_USE, 0.6f, 1.0f)
-                    player.removePotionEffect(PotionEffectType.DAMAGE_RESISTANCE)
-                    player.addPotionEffect(PotionEffect(PotionEffectType.DAMAGE_RESISTANCE, 300, 0))
-                    player.sendMessage("シールドがあなたを守った")
-                    if (player.name == shield1target) { shield1target = "None" }
-                    if (player.name == shield2target) { shield2target = "None" }
+                    if (player.name == shield1target || player.name == shield2target) {
+                        if (player.name == shield1target) { shield1target = "None" }
+                        if (player.name == shield2target) { shield2target = "None" }
+                        // シールドが付与されているプレイヤーは、ダメージを無効化する
+                        player.playEffect(EntityEffect.TOTEM_RESURRECT)
+                        player.playSound(player.location, Sound.ITEM_TOTEM_USE, 0.6f, 1.0f)
+                        player.removePotionEffect(PotionEffectType.DAMAGE_RESISTANCE)
+                        player.addPotionEffect(PotionEffect(PotionEffectType.DAMAGE_RESISTANCE, 300, 0))
+                        player.sendMessage("シールドがあなたを守った")
+                    }
                 }
                 else {
                     // ダメージとデバフを与える

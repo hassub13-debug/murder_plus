@@ -10,6 +10,8 @@ import org.bukkit.event.entity.*
 import org.bukkit.plugin.java.JavaPlugin
 import org.bukkit.event.inventory.*
 import org.bukkit.event.player.*
+import org.bukkit.inventory.ItemStack
+import org.bukkit.inventory.meta.PotionMeta
 
 class PlayerSettings(private val plugin: JavaPlugin) : Listener {
     var invincible = true
@@ -98,6 +100,17 @@ class PlayerSettings(private val plugin: JavaPlugin) : Listener {
     @EventHandler
     fun onBedEnter(event: PlayerBedEnterEvent) {
         event.isCancelled = true
+    }
+
+    @EventHandler
+    fun onPlayerConsume(event: PlayerItemConsumeEvent) {
+        val player = event.player
+        val consumedItem = event.item
+        if (consumedItem.type == Material.POTION) {
+            Bukkit.getScheduler().runTaskLater(plugin, Runnable {
+                player.inventory.removeItem(ItemStack(Material.GLASS_BOTTLE))
+            }, 2L)
+        }
     }
 }
 
