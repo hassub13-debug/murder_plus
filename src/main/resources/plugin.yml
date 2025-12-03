@@ -1,8 +1,0 @@
-name: murder_plus
-version: '${version}'
-main: me.haskk006.murder_plus.Main
-api-version: '1.20'
-commands:
-  game_start:
-    usage: "/game_start"
-    description: "ゲームを開始します"
